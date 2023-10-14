@@ -1,10 +1,12 @@
 package br.dev.luancode.todolist.task;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,9 +26,28 @@ public class TaskController {
   public ResponseEntity<Object> create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
     taskModel.setUserId((UUID) request.getAttribute("userId"));
 
+    var currentDate = LocalDateTime.now();
+
+    if (currentDate.isAfter(taskModel.getStartAt()) || currentDate.isAfter(taskModel.getEndAt())) {
+      return ResponseHandler.generateResponse("The start/end at date must be greater than the current date",
+          HttpStatus.BAD_REQUEST, null);
+    }
+
+    if (taskModel.getStartAt().isAfter(taskModel.getEndAt())) {
+      return ResponseHandler.generateResponse("The start at date must be less than the end at date",
+          HttpStatus.BAD_REQUEST, null);
+    }
+
     var task = this.taskRepository.save(taskModel);
 
     return ResponseHandler.generateResponse(null, HttpStatus.CREATED, task);
+  }
+
+  @GetMapping("/")
+  public ResponseEntity<Object> list(HttpServletRequest request) {
+    var tasks = this.taskRepository.findByUserId((UUID) request.getAttribute("userId"));
+
+    return ResponseHandler.generateResponse(null, HttpStatus.OK, tasks);
   }
 
 }
