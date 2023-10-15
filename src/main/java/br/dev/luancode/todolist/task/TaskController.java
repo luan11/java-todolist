@@ -27,7 +27,8 @@ public class TaskController {
 
   @PostMapping("/")
   public ResponseEntity<Object> create(@RequestBody TaskModel taskModel, HttpServletRequest request) {
-    taskModel.setUserId((UUID) request.getAttribute("userId"));
+    var userId = (UUID) request.getAttribute("userId");
+    taskModel.setUserId(userId);
 
     var currentDate = LocalDateTime.now();
 
@@ -48,7 +49,8 @@ public class TaskController {
 
   @GetMapping("/")
   public ResponseEntity<Object> list(HttpServletRequest request) {
-    var tasks = this.taskRepository.findByUserId((UUID) request.getAttribute("userId"));
+    var userId = (UUID) request.getAttribute("userId");
+    var tasks = this.taskRepository.findByUserId(userId);
 
     return ResponseHandler.generateResponse(null, HttpStatus.OK, tasks);
   }
@@ -57,6 +59,17 @@ public class TaskController {
   public ResponseEntity<Object> update(@RequestBody TaskModel taskModel, @PathVariable UUID id,
       HttpServletRequest request) {
     var currentTask = this.taskRepository.findById(id).orElse(null);
+    var userId = (UUID) request.getAttribute("userId");
+
+    if (currentTask == null) {
+      return ResponseHandler.generateResponse("Task not found", HttpStatus.NOT_FOUND,
+          null);
+    }
+
+    if (!currentTask.getUserId().equals(userId)) {
+      return ResponseHandler.generateResponse("User without permission to edit this task", HttpStatus.BAD_REQUEST,
+          null);
+    }
 
     Utils.copyNonNullProperties(taskModel, currentTask);
 
